@@ -48,9 +48,10 @@ function Compute() {
   }
   const outline = buttonVariants({ variant: "outline" });
   return <main className="min-h-screen bg-background text-foreground">
-    <header className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-5 px-6 py-6 font-mono text-sm">
-      <Link to="/compute" className="inline-flex items-center gap-3"><Network className="size-5 text-accent" aria-hidden="true" />distributed compute</Link>
-      <nav aria-label="Platform" className="flex gap-6 text-muted-foreground">
+    <header className="mx-auto grid max-w-6xl grid-cols-2 items-center gap-x-4 gap-y-5 px-6 py-6 font-mono text-sm md:grid-cols-[1fr_auto_1fr]">
+      <Link to="/distributed-compute" className="col-start-1 row-start-1 inline-flex w-fit items-center gap-2 text-muted-foreground hover:text-primary"><ArrowLeft className="size-4" aria-hidden="true" />Back to project</Link>
+      <Link to="/compute" className="col-span-2 col-start-1 row-start-2 inline-flex items-center justify-self-center gap-3 md:col-span-1 md:col-start-2 md:row-start-1"><Network className="size-5 text-accent" aria-hidden="true" />distributed compute</Link>
+      <nav aria-label="Platform" className="col-start-2 row-start-1 flex justify-self-end gap-6 text-muted-foreground md:col-start-3">
         <a href={`${REPO}/blob/main/desktop/README.md`} target="_blank" rel="noreferrer" className="hover:text-primary">docs ↗</a>
         <a href={REPO} target="_blank" rel="noreferrer" className="hover:text-primary">github ↗</a>
       </nav>
