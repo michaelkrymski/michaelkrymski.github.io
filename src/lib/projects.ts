@@ -1,0 +1,17 @@
+export type Project = { name: string; title: string; description: string; detail: string; url: string; page?: "/distributed-compute"; language: string; tag: string };
+
+const GH = "https://github.com/michaelkrymski";
+
+export const featured = [
+  { label: "tuning cars", repo: "BinViewer", url: `${GH}/BinViewer`, tone: "primary" as const },
+  { label: "implementing distributed compute", repo: "distributed-compute", url: `${GH}/distributed-compute`, page: "/distributed-compute" as const, tone: "accent" as const },
+];
+
+export const projects: Project[] = [
+  { name: "BinViewer", title: "BIN Viewer — ECU Calibration Workspace", description: "A tuning application I built to simplify developing BMW N55 engine calibrations. It turns binary ECU files into an organized, editable workspace with focused tuning categories, map and flex-fuel navigation, and visual change previews.", detail: "Reads BIN files using XDF definitions, with linked fuel-bank editing, automatic project folders and revisions, persistent table notes, and CLI access for AI-assisted analysis. Scaled table values become binary edits while preserving addresses, data formats, and revision history.", url: `${GH}/BinViewer`, language: "Python · Flask · JavaScript", tag: "Car tuning" },
+  { name: "N55Maps", title: "N55Maps", description: "BMW N55 calibrations created with BIN Viewer — examples of the workspace in use and my own hands-on tuning work.", detail: "A collection of maps and revisions from developing personal engine calibrations.", url: `${GH}/N55Maps`, language: "BMW N55 · ECU calibrations", tag: "Car tuning" },
+  { name: "distributed-compute", title: "distributed-compute", description: "A cross-platform application that combines NVIDIA and AMD GPUs across multiple computers for collaborative machine-learning training.", detail: "Guided setup, secure team access, live progress tracking, synchronized benchmarks, and training-time estimates.", url: `${GH}/distributed-compute`, page: "/distributed-compute", language: "Python · PyTorch · Hivemind · Slint · React · Cloudflare", tag: "Distributed compute" },
+  { name: "CaneSight", title: "CaneSight", description: "An October 2026 hackathon project that adapts a walking stick to help blind people detect upcoming obstacles and understand what is in front of them.", detail: "LiDAR and a camera connected to a Raspberry Pi Zero 2 W provide directional vibration alerts for obstacles, alongside spoken descriptions of the scene ahead.", url: `${GH}/CaneSight`, language: "LiDAR · Raspberry Pi Zero 2 W · Computer vision", tag: "Misc" },
+  { name: "ParkPlus", title: "ParkPlus", description: "A Data Structures project that finds the closest parking spots using Florida road data from OpenStreetMap.", detail: "I built the C++/Python bridge, a basic frontend, and the road-data processing pipeline. The program uses Dijkstra’s and A* for routing; the algorithm implementations were not my work.", url: `${GH}/ParkPlus`, language: "C++ · Python · OpenStreetMap", tag: "Misc" },
+  { name: "ProjectAnnenberg", title: "Project Annenberg", description: "A Harvard Summer project measuring gases from food waste to help keep dumpster odors from affecting workers and nearby areas.", detail: "An Arduino and MQ-135 gas sensor measure gas levels, with SD-card logging for monitoring conditions and informing ventilation improvements.", url: `${GH}/ProjectAnnenberg`, language: "Arduino · C++ · MQ-135", tag: "Misc" },
+];
