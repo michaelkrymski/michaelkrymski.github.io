@@ -24,7 +24,7 @@ function savedServers(): string[] {
   } catch { return []; }
 }
 
-function Compute() {
+export function Compute() {
   const [address, setAddress] = useState("");
   const [server, setServer] = useState("");
   const [error, setError] = useState("");
@@ -81,9 +81,9 @@ function Compute() {
         <Users className="mb-6 mt-8 size-7 text-accent" aria-hidden="true" />
         <h2 className="font-display text-4xl">Connect to your team.</h2>
         <p className="mb-6 mt-4 leading-relaxed text-muted-foreground">Ask your organizer for the team's server address. Open its dashboard, then sign in there with your member key or administrator account.</p>
-        <form onSubmit={connect} className="space-y-4">
+        <form onSubmit={connect} autoComplete="off" noValidate className="space-y-4">
           <label htmlFor="team-address" className="block font-mono text-xs">Team server address</label>
-          <input id="team-address" type="url" autoComplete="url" spellCheck={false} required value={address} onChange={e => { setAddress(e.target.value); setServer(""); setError(""); }} placeholder="https://team.example.com" aria-describedby="team-help team-error" aria-invalid={!!error} className="w-full rounded-md border border-border bg-background px-4 py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent" />
+          <input id="team-address" name="team-server" type="text" inputMode="url" autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false} required value={address} onChange={e => { setAddress(e.target.value); setServer(""); setError(""); }} placeholder="https://team.example.com" aria-describedby="team-help team-error" aria-invalid={!!error} className="w-full rounded-md border border-border bg-background px-4 py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent" />
           <p id="team-help" className="text-xs leading-relaxed text-muted-foreground">Server address only. Keep your access key out of this field.</p>
           <label className="flex items-center gap-2 text-sm text-muted-foreground"><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} className="accent-[var(--primary)]" />Remember this address on this device</label>
           <p id="team-error" role="alert" className="text-sm text-destructive">{error}</p>
