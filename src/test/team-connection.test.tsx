@@ -22,7 +22,7 @@ describe("Team connection form", () => {
     fireEvent.change(field, { target: { value: "https://team.example.com" } });
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.getByRole("link", { name: "Open team dashboard" })).toHaveAttribute("href", "https://team.example.com");
-    expect(screen.getByRole("heading", { name: "Connect to your team." })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Use a self-hosted server." })).toBeVisible();
     expect(localStorage.length).toBe(0);
   });
 

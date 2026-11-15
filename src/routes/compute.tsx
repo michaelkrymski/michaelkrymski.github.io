@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { ArrowLeft, ArrowUpRight, Network, MonitorDown, Users, BookOpen, Github, Server, ShieldCheck, X } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { teamAddress } from "@/lib/team-address";
+import { ComputePlatform } from "@/components/compute-platform";
 
 export const Route = createFileRoute("/compute")({
   head: () => ({ meta: [
@@ -61,13 +62,14 @@ export function Compute() {
       <div className="relative">
         <p className="mb-5 font-mono text-xs text-accent">// your hardware. your team.</p>
         <h1 className="max-w-3xl font-display text-6xl leading-tight sm:text-8xl">Put your compute<br /><span className="italic text-primary">to work.</span></h1>
-        <p className="mt-7 max-w-2xl text-lg leading-relaxed text-muted-foreground">Bring computers together for collaborative model training and benchmarks. Start with your machine, then connect to your team's workspace.</p>
+        <p className="mt-7 max-w-2xl text-lg leading-relaxed text-muted-foreground">Create a team, configure your own project, and bring computers together for collaborative model training and benchmarks.</p>
         <div className="mt-7 flex flex-wrap gap-2 font-mono text-xs text-muted-foreground">
           {["Windows + Linux", "NVIDIA + AMD", "Open source · Apache-2.0"].map(label => <span key={label} className="rounded-full border border-border bg-card px-3 py-2">{label}</span>)}
         </div>
       </div>
     </section>
-    <section aria-label="Get started" className="mx-auto grid max-w-6xl gap-6 px-6 pb-16 lg:grid-cols-2">
+    <ComputePlatform />
+    <section aria-label="Desktop and self-hosted setup" className="mx-auto grid max-w-6xl gap-6 px-6 pb-16 lg:grid-cols-2">
       <div className="flex flex-col rounded-lg border border-border bg-card p-6 sm:p-9">
         <p className="font-mono text-xs text-accent">01 / YOUR COMPUTER</p>
         <MonitorDown className="mb-6 mt-8 size-7 text-primary" aria-hidden="true" />
@@ -79,7 +81,7 @@ export function Compute() {
       <div className="rounded-lg border border-accent/30 bg-card p-6 sm:p-9">
         <p className="font-mono text-xs text-accent">02 / YOUR TEAM</p>
         <Users className="mb-6 mt-8 size-7 text-accent" aria-hidden="true" />
-        <h2 className="font-display text-4xl">Connect to your team.</h2>
+        <h2 className="font-display text-4xl">Use a self-hosted server.</h2>
         <p className="mb-6 mt-4 leading-relaxed text-muted-foreground">Ask your organizer for the team's server address. Open its dashboard, then sign in there with your member key or administrator account.</p>
         <form onSubmit={connect} autoComplete="off" noValidate className="space-y-4">
           <label htmlFor="team-address" className="block font-mono text-xs">Team server address</label>
@@ -104,12 +106,12 @@ export function Compute() {
         </li>)}</ul>
       </div>}
       <div className="flex flex-col justify-between gap-6 rounded-lg border border-border p-6 sm:flex-row sm:items-center sm:p-9 lg:col-span-2">
-        <div className="max-w-xl"><Server className="mb-4 size-5 text-accent" aria-hidden="true" /><h2 className="font-display text-3xl">Organizing a new team?</h2><p className="mt-3 text-sm leading-relaxed text-muted-foreground">Follow the self-hosting guide to deploy a team server and manage member keys. Team creation currently requires setup; this page does not provision a backend automatically.</p></div>
+        <div className="max-w-xl"><Server className="mb-4 size-5 text-accent" aria-hidden="true" /><h2 className="font-display text-3xl">Prefer your own hosting?</h2><p className="mt-3 text-sm leading-relaxed text-muted-foreground">Create a shared-service team above for the simplest setup. If you need your own infrastructure, follow the self-hosting guide to run an independent server.</p></div>
         <a href={`${REPO}/blob/main/desktop/PROJECT-SETUP.md`} target="_blank" rel="noreferrer" className={`${outline} shrink-0 gap-2`}>Self-host a team <ArrowUpRight className="size-4" aria-hidden="true" /></a>
       </div>
     </section>
     <footer className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-5 border-t border-border px-6 py-8 font-mono text-xs text-muted-foreground">
-      <span className="inline-flex items-center gap-2"><ShieldCheck className="size-4" aria-hidden="true" />Team sign-in stays on your team's server.</span>
+      <span className="inline-flex items-center gap-2"><ShieldCheck className="size-4" aria-hidden="true" />Private teams. Project-scoped worker keys.</span>
       <Link to="/distributed-compute" className="inline-flex items-center gap-2 hover:text-primary"><ArrowLeft className="size-3" aria-hidden="true" />About the project</Link>
       <a href={REPO} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 hover:text-primary"><Github className="size-4" aria-hidden="true" />Source code</a>
     </footer>

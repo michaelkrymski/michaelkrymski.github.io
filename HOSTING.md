@@ -11,7 +11,7 @@ runs the tests, builds the PAGES_STATIC=1 export with PAGES_BASE=/, writes HTML
 shells for direct route access, and deploys dist/client. The CNAME is retained
 in the published artifact. Settings > Pages > Source must be GitHub Actions.
 Do not push generated dist files. This is a static site; it holds no team keys
-or training database. /distributed-compute introduces the project; /compute is the neutral product entry. Team addresses are entered by visitors and optionally stored only on their device. Keys and sign-in stay on the selected team server.
+or training database. /distributed-compute introduces the project; /compute is the shared team/project control room. Account, membership, key hashes and coordination data live in the separate Worker/D1 service described below. Self-hosted server addresses can optionally be remembered on the visitor's device.
 
 ## Local checks
 
@@ -45,10 +45,25 @@ use GitHub's exact TXT record and retain it after verification.
 
 ## Product entry and future subdomain
 
-The live entry URL is https://michaelkrymski.me/compute. It is not an embedded
-team dashboard, team directory, global account service, or automatic team
-provisioner. Existing team servers remain independent. The hosting guide linked
-from the entry page documents the current manual deployment process.
+The live entry URL is https://michaelkrymski.me/compute. Its default API is
+https://distributed-compute-platform.mkrymski.chatgpt.site. The service uses a
+Cloudflare Worker and D1; its source, schema, deployment and recovery notes are
+in the product repository's `platform/` directory. No per-team Netlify deployment
+is necessary: accounts can create isolated teams and projects on this service.
+Existing self-hosted team dashboards remain independent and are not migrated.
+
+The first team creator becomes an administrator. Invitations add members;
+administrators can change roles and regenerate/revoke project-scoped worker
+keys. Plaintext keys appear only at issuance/rotation and are never committed.
+Browser account sessions last 12 hours and use a bearer token in tab-scoped
+sessionStorage, needed for this cross-origin static frontend. Passwords are
+not stored in the browser. There is no email/password recovery flow yet; users
+should save their passwords and keep another trusted team administrator.
+
+For local API development only, set VITE_COMPUTE_API before building. Production
+builds must leave it unset to use the service above. Runtime data, SQLite files,
+fixture credentials, result files and generated deployment artifacts stay out
+of source control. Public API addresses and source code are safe to publish.
 
 compute.michaelkrymski.me is not configured yet. A separate hostname needs its
 own hosting/domain mapping and DNS record. GitHub Pages supports one custom
