@@ -36,9 +36,9 @@ function DistributedCompute() {
         <p className="mt-5 max-w-3xl leading-relaxed text-muted-foreground">{project.detail}</p>
         <p className="mt-8 max-w-3xl font-mono text-xs leading-relaxed text-accent">{project.language}</p>
         <div className="mt-10 flex flex-wrap gap-3">
-        <a href="https://gatorllm-team-2-lab.netlify.app" target="_blank" rel="noreferrer" className={`${buttonVariants()} gap-2`}>
-          Open dashboard <ArrowUpRight className="size-4" aria-hidden="true" />
-        </a>
+        <Link to="/compute" className={`${buttonVariants()} gap-2`}>
+          Get started <ArrowUpRight className="size-4" aria-hidden="true" />
+        </Link>
         <a href={`${project.url}/blob/main/desktop/README.md`} target="_blank" rel="noreferrer" className={`${buttonVariants({ variant: "outline" })} gap-2`}>
           <Download className="size-4" aria-hidden="true" /> Desktop setup
         </a>
@@ -46,7 +46,7 @@ function DistributedCompute() {
           <Github className="size-4" aria-hidden="true" /> Source code <ArrowUpRight className="size-4" aria-hidden="true" />
         </a>
         </div>
-        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">The dashboard opens the existing team service. A team key or administrator account is required for protected features. Contributing compute requires the desktop app or a locally launched worker.</p>
+        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">Get the desktop app, connect to your own team, or explore the hosting guide.</p>
         <div className="mt-20 grid gap-6 border-t border-border pt-10 md:grid-cols-3">
           {[
             { icon: Cpu, title: "Different GPUs. Shared work.", text: "NVIDIA CUDA and AMD ROCm workers contribute to collaborative PyTorch training across computers." },

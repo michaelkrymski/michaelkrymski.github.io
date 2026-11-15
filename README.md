@@ -2,7 +2,7 @@
 
 Live at https://michaelkrymski.me. This is the publishing repository for the portfolio, originally built with [Lovable](https://lovable.dev). See [HOSTING.md](HOSTING.md) for deployment and [PORTFOLIO_SOURCE.md](PORTFOLIO_SOURCE.md) for syncing later Lovable edits.
 
-The dedicated [/distributed-compute](https://michaelkrymski.me/distributed-compute) project page opens the existing dashboard, desktop setup and source code.
+The dedicated [/distributed-compute](https://michaelkrymski.me/distributed-compute) project page links to the neutral [Get started](https://michaelkrymski.me/compute) screen, desktop setup and source code. The product screen connects visitors to their own team server; no group dashboard is featured as the default.
 
 ## Build with Lovable
 

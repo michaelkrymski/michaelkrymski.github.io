@@ -11,7 +11,7 @@ runs the tests, builds the PAGES_STATIC=1 export with PAGES_BASE=/, writes HTML
 shells for direct route access, and deploys dist/client. The CNAME is retained
 in the published artifact. Settings > Pages > Source must be GitHub Actions.
 Do not push generated dist files. This is a static site; it holds no team keys
-or training database. /distributed-compute links to the existing team dashboard.
+or training database. /distributed-compute introduces the project; /compute is the neutral product entry. Team addresses are entered by visitors and optionally stored only on their device. Keys and sign-in stay on the selected team server.
 
 ## Local checks
 
@@ -42,3 +42,16 @@ ownership verification is available at https://github.com/settings/pages;
 use GitHub's exact TXT record and retain it after verification.
 
 [Pages settings](https://github.com/michaelkrymski/michaelkrymski.github.io/settings/pages)
+
+## Product entry and future subdomain
+
+The live entry URL is https://michaelkrymski.me/compute. It is not an embedded
+team dashboard, team directory, global account service, or automatic team
+provisioner. Existing team servers remain independent. The hosting guide linked
+from the entry page documents the current manual deployment process.
+
+compute.michaelkrymski.me is not configured yet. A separate hostname needs its
+own hosting/domain mapping and DNS record. GitHub Pages supports one custom
+domain per repository; simply pointing that hostname at the existing personal
+Pages site does not map it to /compute. Keep the working /compute URL until a
+separate product deployment is configured and its HTTPS certificate is ready.

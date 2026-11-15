@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ComputeRouteImport } from './routes/compute'
 import { Route as DistributedComputeRouteImport } from './routes/distributed-compute'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ComputeRoute = ComputeRouteImport.update({
+  id: '/compute',
+  path: '/compute',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DistributedComputeRoute = DistributedComputeRouteImport.update({
@@ -25,27 +31,31 @@ const DistributedComputeRoute = DistributedComputeRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/compute': typeof ComputeRoute
   '/distributed-compute': typeof DistributedComputeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/compute': typeof ComputeRoute
   '/distributed-compute': typeof DistributedComputeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/compute': typeof ComputeRoute
   '/distributed-compute': typeof DistributedComputeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/distributed-compute'
+  fullPaths: '/' | '/compute' | '/distributed-compute'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/distributed-compute'
-  id: '__root__' | '/' | '/distributed-compute'
+  to: '/' | '/compute' | '/distributed-compute'
+  id: '__root__' | '/' | '/compute' | '/distributed-compute'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ComputeRoute: typeof ComputeRoute
   DistributedComputeRoute: typeof DistributedComputeRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compute': {
+      id: '/compute'
+      path: '/compute'
+      fullPath: '/compute'
+      preLoaderRoute: typeof ComputeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/distributed-compute': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ComputeRoute: ComputeRoute,
   DistributedComputeRoute: DistributedComputeRoute,
 }
 export const routeTree = rootRouteImport

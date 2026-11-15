@@ -14,6 +14,12 @@ const base = process.env.PAGES_BASE ?? "/";
 // Every route that must answer with a 200. Add a page here when a route is added.
 const ROUTES = [
   {
+    path: "/compute",
+    file: "compute/index.html",
+    title: "Distributed Compute — Get started",
+    description: "Set up your computer, connect to your team's workspace, or self-host a team.",
+  },
+  {
     path: "/",
     file: "index.html",
     title: "Michael Krymski — Portfolio",
@@ -77,7 +83,7 @@ for (const route of ROUTES) {
 }
 
 // Unknown paths: serve the shell so the router can render the right page.
-await writeFile(path.join(clientDir, "404.html"), shell(ROUTES[0]), "utf8");
+await writeFile(path.join(clientDir, "404.html"), shell(ROUTES.find(route => route.path === "/")), "utf8");
 console.log("pages-shell: wrote 404.html");
 
 // GitHub Pages runs Jekyll unless this file exists.
