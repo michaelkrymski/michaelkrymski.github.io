@@ -128,6 +128,12 @@ function ProjectSessions({project,path,api,admin,username,report,perform}:{proje
   useEffect(()=>{let disposed=false;const refresh=async()=>{try{const [b,r]=await Promise.all([api<Snapshot>(path+"/benchmark"),api<Snapshot>(path+"/rooms")]);if(!disposed){setBench(b);setTraining(r);}}catch(e){if(!disposed)report(e instanceof Error ? e.message : "Could not refresh the session.");}};setBench(null);setTraining(null);void refresh();const timer=setInterval(refresh,5000);return()=>{disposed=true;clearInterval(timer);};},[api,path,report]);
   async function action(kind:string,b:unknown){setWorking(true);await perform(async()=>{await api(path+"/"+kind,b);await load();});setWorking(false);}
   const session=bench?.session,room=training?.room;
+  useEffect(()=>{
+    const config=session?.config;
+    setWarmup(String(config?.warmupSeconds ?? 60));setMeasure(String(config?.measureSeconds ?? 300));
+    setBatch(String(config?.batchTokens ?? Math.ceil(98304/project.spec.model.context)*project.spec.model.context));
+    setProfile(config?.trainingProfile ?? "optimized-fp32");setMicro(String(config?.microbatch ?? 4));setSteps(String(config?.localSteps ?? 1));
+  },[path,session?.id]);
   const reports=(bench?.agents||[]).filter(a=>session?.expected?.includes(a.userId) && a.result);
   const complete=!!session?.expected?.length && reports.length===session.expected.length && reports.every(a=>a.result.complete);
   const seconds=Math.max(0,...reports.map(a=>Number(a.result.measuredSeconds)||0));
