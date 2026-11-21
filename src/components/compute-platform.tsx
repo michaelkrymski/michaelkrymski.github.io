@@ -124,10 +124,31 @@ function ProjectSessions({project,path,api,admin,username,report,perform}:{proje
   const [bench,setBench]=useState<Snapshot|null>(null),[training,setTraining]=useState<Snapshot|null>(null),[kind,setKind]=useState("benchmark"),[working,setWorking]=useState(false);
   const [warmup,setWarmup]=useState("60"),[measure,setMeasure]=useState("300"),[batch,setBatch]=useState("98304"),[profile,setProfile]=useState("optimized-fp32"),[micro,setMicro]=useState("4"),[steps,setSteps]=useState("1");
   const [saveMessage,setSaveMessage]=useState<{text:string;failed:boolean} | null>(null);
+  const [roomMessage,setRoomMessage]=useState<{text:string;failed:boolean} | null>(null);
   const [peer,setPeer]=useState(""),[fingerprint,setFingerprint]=useState(""),[roomName,setRoomName]=useState("Training run"),[shards,setShards]=useState("10");
   const load=useCallback(async()=>{const [b,r]=await Promise.all([api<Snapshot>(path+"/benchmark"),api<Snapshot>(path+"/rooms")]);setBench(b);setTraining(r);},[api,path]);
   useEffect(()=>{let disposed=false;const refresh=async()=>{try{const [b,r]=await Promise.all([api<Snapshot>(path+"/benchmark"),api<Snapshot>(path+"/rooms")]);if(!disposed){setBench(b);setTraining(r);}}catch(e){if(!disposed)report(e instanceof Error ? e.message : "Could not refresh the session.");}};setBench(null);setTraining(null);void refresh();const timer=setInterval(refresh,5000);return()=>{disposed=true;clearInterval(timer);};},[api,path,report]);
-  async function action(kind:string,b:unknown){setWorking(true);await perform(async()=>{await api(path+"/"+kind,b);await load();});setWorking(false);}
+  async function action(kind:string,b:{action:string;[key:string]:unknown}){
+    setWorking(true);
+    try {
+      if (kind!=="rooms") {
+        await perform(async()=>{await api(path+"/"+kind,b);await load();});
+        return;
+      }
+      setRoomMessage(null);
+      await api(path+"/rooms",b);
+      if (b.action==="start") setRoomMessage({text:"Start accepted. Waiting for the assigned workers to launch.",failed:false});
+      try {
+        setTraining(await api<Snapshot>(path+"/rooms"));
+      } catch {
+        setRoomMessage({text:"The room was updated. Waiting for the dashboard to refresh.",failed:false});
+      }
+    } catch (error) {
+      setRoomMessage({text:error instanceof Error ? error.message : "Could not update the training room.",failed:true});
+    } finally {
+      setWorking(false);
+    }
+  }
   const session=bench?.session,room=training?.room;
   const lobby = session?.phase === "lobby";
   const saved = lobby ? session.config : bench?.settings ?? session?.config;
@@ -176,6 +197,10 @@ function ProjectSessions({project,path,api,admin,username,report,perform}:{proje
   const progress=session ? Math.max(0,Math.min(1,(elapsed-session.config.warmupSeconds)/session.config.measureSeconds)) : 0;
   const expectedRoom=room ? safeJson(room.expected) : [];
   const progressRows=(training?.members||[]).map(m=>({...m,data:safeJson(m.progress)}));
+  const workerOnline=(worker:{last_seen:number})=>!!training && worker.last_seen>training.serverTime-20000;
+  const onlineWorkers=progressRows.filter(workerOnline);
+  const readyWorkers=onlineWorkers.filter(worker=>worker.ready).length;
+  const canStartTraining=room?.phase==="lobby" && readyWorkers>0 && readyWorkers===onlineWorkers.length;
   const trained=Math.max(0,...progressRows.map(m=>Number(m.data.nominal_global_tokens)||0));
   function downloadConfig(){const value=project.spec.runtime==="external" ? project.spec : {model:project.spec.model,training:{seed:42,learning_rate:0.0003,weight_decay:0.1,target_batch_tokens:Number(batch),target_tokens:project.spec.targetTokens,data_shards:Number(shards)}};const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:"application/json"}));const a=document.createElement("a");a.href=url;a.download=project.spec.runtime==="external" ? "project-spec.json" : "training-config.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   return <div className="space-y-6">
@@ -195,7 +220,16 @@ function ProjectSessions({project,path,api,admin,username,report,perform}:{proje
     </>}
     {kind==="training" && <>
       <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs text-muted-foreground"><tr><th className="py-3">Computer</th><th>State</th><th>Epoch</th><th>Loss</th><th>Ready</th></tr></thead><tbody>{progressRows.map(m=><tr className="border-t border-border" key={m.instance_id}><td className="py-4">{m.name}<span className="block text-xs text-muted-foreground">{m.device}</span></td><td>{training!.serverTime-m.last_seen>20000 ? "Offline" : m.ready ? "Ready" : "Connected"}</td><td>{m.data.epoch ?? "—"}</td><td>{typeof m.data.loss==="number" ? m.data.loss.toFixed(4) : "—"}</td><td>{room?.phase==="lobby" && m.user_id===username && <button className={secondary} disabled={working} onClick={()=>void action("rooms",{action:"ready",roomId:room.id,instanceId:m.instance_id,ready:!m.ready})}>{m.ready ? "Unready" : "Mark ready"}</button>}</td></tr>)}</tbody></table></div>
-      {admin && room && <div className="flex gap-3"><button className={`${primary} gap-2`} disabled={working || room.phase!=="lobby"} onClick={()=>void action("rooms",{action:"start",roomId:room.id})}><Play className="size-4" />Start training</button><button className={`${secondary} gap-2`} disabled={working || room.phase==="cancelled"} onClick={()=>void action("rooms",{action:"cancel",roomId:room.id})}><Square className="size-4" />Cancel room</button></div>}
+      {admin && room && <div className="space-y-3">
+        {room.phase==="lobby" && <p className="text-sm text-muted-foreground">
+          {onlineWorkers.length===0 ? "Waiting for a worker to connect. One worker can train the full run." : `${readyWorkers} of ${onlineWorkers.length} online workers ready. Each worker must mark itself ready before you start.`}
+        </p>}
+        <div className="flex flex-wrap gap-3">
+          <button className={`${primary} gap-2`} disabled={working || !canStartTraining} onClick={()=>void action("rooms",{action:"start",roomId:room.id})}><Play className="size-4" />Start training</button>
+          <button className={`${secondary} gap-2`} disabled={working || !["lobby","running"].includes(room.phase)} onClick={()=>void action("rooms",{action:"cancel",roomId:room.id})}><Square className="size-4" />Cancel room</button>
+        </div>
+      </div>}
+      {roomMessage && (roomMessage.failed || room?.phase==="lobby") && <p className={roomMessage.failed ? "text-sm text-destructive" : "text-sm text-accent"} role={roomMessage.failed ? "alert" : "status"}>{roomMessage.text}</p>}
       {admin && (!room || ["finished","cancelled"].includes(room.phase)) && <form className="grid gap-4 rounded-md border border-border p-5 sm:grid-cols-2" onSubmit={e=>{e.preventDefault();void action("rooms",{action:"create",name:roomName,peer,fingerprint,shards:Number(shards),targetTokens:project.spec.targetTokens});}}><Label title="Room name"><input className={field} value={roomName} onChange={e=>setRoomName(e.target.value)} required /></Label><Label title="Maximum run shards"><input className={field} type="number" min={1} max={1000} value={shards} onChange={e=>setShards(e.target.value)} required /></Label><Label title="Verified bundle fingerprint"><input className={field} value={fingerprint} onChange={e=>setFingerprint(e.target.value)} required placeholder="64-character bundle fingerprint" /></Label><Label title="Bootstrap peer"><input className={field} value={peer} onChange={e=>setPeer(e.target.value)} required placeholder="/ip4/…/tcp/…/p2p/…" /></Label><button className={primary} disabled={working}>Open training room</button></form>}
     </>}
     <details className="rounded-md border border-border p-5"><summary className="cursor-pointer font-mono text-xs">Connect the desktop app or command-line workers</summary><div className="mt-4 space-y-4 text-sm leading-relaxed text-muted-foreground"><p>Create a worker key under Worker keys, then use this server address in the desktop app: <code className="break-all text-accent">{SERVICE}</code>. The key selects this team and project. Your account's current team role determines organizer access.</p><p>The desktop app launches local coordination and training processes. The browser controls sessions and shows progress; it cannot launch software on another person's computer.</p><pre className="overflow-x-auto rounded-md bg-background p-4 text-xs">{`python -m glmbench coordinator --api ${SERVICE} --host YOUR_TAILSCALE_IP\npython -m glmbench agent --api ${SERVICE} --host YOUR_TAILSCALE_IP --device auto --ready --max-parameters ${project.spec.parameters}${project.spec.runtime === "external" ? " --workload-factory YOUR_MODULE:factory" : ""}`}</pre><p>Keys are entered through a hidden prompt. For corpus training, download the project configuration, prepare and share a run bundle, then choose that bundle when joining the room in the desktop app.</p><a className="text-accent hover:underline" href="https://github.com/michaelkrymski/distributed-compute/blob/main/training/README.md" target="_blank" rel="noreferrer">Training and bundle preparation guide ↗</a></div></details>
