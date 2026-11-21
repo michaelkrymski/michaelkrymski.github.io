@@ -12,7 +12,7 @@ type Project = {id:string;revision:number;spec:{name:string;modelName:string;par
 type Member = {account_id:string;username:string;role:string};
 type WorkerKey = {id:string;account_id:string;project_id:string;prefix:string;label:string;generation:number;revoked_at:number|null};
 type TeamView = {team:Team;role:string;projects:Project[];members:Member[];keys:WorkerKey[];audit:{action:string;target:string;created_at:number}[]};
-type Snapshot = {serverTime:number;session?:any;agents?:any[];history?:any[];room?:any;members?:any[]};
+type Snapshot = {serverTime:number;session?:any;settings?:any;agents?:any[];history?:any[];room?:any;members?:any[]};
 type Reveal = {title:string;value:string;help:string};
 type Api = <T=any>(path:string,body?:unknown)=>Promise<T>;
 const field = "w-full min-w-0 rounded-md border border-border bg-background px-3 py-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent";
@@ -89,7 +89,7 @@ export function ComputePlatform() {
           <div className="mb-6 flex flex-wrap items-end gap-3"><div className="min-w-0 flex-1"><Label title="Project"><select className={field} value={projectId} onChange={e=>setProjectId(e.target.value)}>{team.projects.map(p=><option key={p.id} value={p.id}>{p.spec.name} · {(p.spec.parameters/1e6).toFixed(2)}M parameters</option>)}</select></Label></div>{isAdmin && <button className={`${secondary} gap-2`} disabled={busy} onClick={()=>setShowNewProject(v=>!v)}><Plus className="size-4" />New project</button>}</div>
           {showNewProject && isAdmin && <ProjectForm busy={busy} save={spec=>perform(async()=>{const d=await api(teamPath+"/projects",spec);await loadTeam();setProjectId(d.id);setShowNewProject(false);})} />}
           <div className="mb-6 flex flex-wrap gap-2">{["session","keys",...(isAdmin ? ["administration"] : [])].map(id=><button className={tab===id ? primary : secondary} key={id} onClick={()=>setTab(id)}>{id==="session" ? "Sessions & progress" : id==="keys" ? "Worker keys" : "Administration"}</button>)}</div>
-          {selected && tab==="session" && <ProjectSessions project={selected} path={teamPath+"/projects/"+projectId} api={api} admin={!!isAdmin} username={user.username} report={setError} perform={perform} />}
+          {selected && tab==="session" && <ProjectSessions key={selected.id} project={selected} path={teamPath+"/projects/"+projectId} api={api} admin={!!isAdmin} username={user.username} report={setError} perform={perform} />}
           {tab==="keys" && <div className="space-y-5">
             <div><h3 className="text-xl font-semibold">Connect computers to this project.</h3><p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">Create a reusable worker key for your account and the selected project. Multiple computers can share it. Keys are displayed only when created or regenerated; rotating or revoking a key disconnects workers using its previous value.</p></div>
             <div className="flex flex-wrap gap-3"><input aria-label="Worker key label" className={`${field} max-w-sm`} value={keyLabel} onChange={e=>setKeyLabel(e.target.value)} maxLength={100} /><button className={`${primary} gap-2`} disabled={busy || !selected} onClick={()=>void issueKey()}><KeyRound className="size-4" />Create worker key</button></div>
@@ -123,17 +123,49 @@ function ProjectForm({busy,save}:{busy:boolean;save:(spec:unknown)=>Promise<void
 function ProjectSessions({project,path,api,admin,username,report,perform}:{project:Project;path:string;api:Api;admin:boolean;username:string;report:(s:string)=>void;perform:(work:()=>Promise<void>)=>Promise<void>}) {
   const [bench,setBench]=useState<Snapshot|null>(null),[training,setTraining]=useState<Snapshot|null>(null),[kind,setKind]=useState("benchmark"),[working,setWorking]=useState(false);
   const [warmup,setWarmup]=useState("60"),[measure,setMeasure]=useState("300"),[batch,setBatch]=useState("98304"),[profile,setProfile]=useState("optimized-fp32"),[micro,setMicro]=useState("4"),[steps,setSteps]=useState("1");
+  const [saveMessage,setSaveMessage]=useState<{text:string;failed:boolean} | null>(null);
   const [peer,setPeer]=useState(""),[fingerprint,setFingerprint]=useState(""),[roomName,setRoomName]=useState("Training run"),[shards,setShards]=useState("10");
   const load=useCallback(async()=>{const [b,r]=await Promise.all([api<Snapshot>(path+"/benchmark"),api<Snapshot>(path+"/rooms")]);setBench(b);setTraining(r);},[api,path]);
   useEffect(()=>{let disposed=false;const refresh=async()=>{try{const [b,r]=await Promise.all([api<Snapshot>(path+"/benchmark"),api<Snapshot>(path+"/rooms")]);if(!disposed){setBench(b);setTraining(r);}}catch(e){if(!disposed)report(e instanceof Error ? e.message : "Could not refresh the session.");}};setBench(null);setTraining(null);void refresh();const timer=setInterval(refresh,5000);return()=>{disposed=true;clearInterval(timer);};},[api,path,report]);
   async function action(kind:string,b:unknown){setWorking(true);await perform(async()=>{await api(path+"/"+kind,b);await load();});setWorking(false);}
   const session=bench?.session,room=training?.room;
+  const lobby = session?.phase === "lobby";
+  const saved = lobby ? session.config : bench?.settings ?? session?.config;
+  const savedWarmup = saved?.warmupSeconds ?? 60;
+  const savedMeasure = saved?.measureSeconds ?? 300;
+  const savedBatch = saved?.batchTokens ?? Math.ceil(98304/project.spec.model.context)*project.spec.model.context;
+  const savedProfile = saved?.trainingProfile ?? "optimized-fp32";
+  const savedMicro = saved?.microbatch ?? 4;
+  const savedSteps = saved?.localSteps ?? 1;
   useEffect(()=>{
-    const config=session?.config;
-    setWarmup(String(config?.warmupSeconds ?? 60));setMeasure(String(config?.measureSeconds ?? 300));
-    setBatch(String(config?.batchTokens ?? Math.ceil(98304/project.spec.model.context)*project.spec.model.context));
-    setProfile(config?.trainingProfile ?? "optimized-fp32");setMicro(String(config?.microbatch ?? 4));setSteps(String(config?.localSteps ?? 1));
-  },[path,session?.id]);
+    setWarmup(String(savedWarmup));
+    setMeasure(String(savedMeasure));
+    setBatch(String(savedBatch));
+    setProfile(savedProfile);
+    setMicro(String(savedMicro));
+    setSteps(String(savedSteps));
+  },[savedWarmup,savedMeasure,savedBatch,savedProfile,savedMicro,savedSteps,session?.id]);
+  const settingsChanged = Number(warmup)!==savedWarmup || Number(measure)!==savedMeasure ||
+    Number(batch)!==savedBatch || profile!==savedProfile || Number(micro)!==savedMicro ||
+    Number(steps)!==savedSteps;
+  async function saveSettings(event:FormEvent) {
+    event.preventDefault();
+    setWorking(true);
+    setSaveMessage(null);
+    try {
+      await api(path+"/benchmark", {
+        action:"configure", sessionId:session?.id, workload:"baseline-training",
+        warmupSeconds:Number(warmup), measureSeconds:Number(measure), batchTokens:Number(batch),
+        trainingProfile:profile, microbatch:Number(micro), localSteps:Number(steps),
+      });
+      await load();
+      setSaveMessage({text:lobby ? "Saved to this lobby and future benchmarks." : "Saved for the next benchmark.",failed:false});
+    } catch (error) {
+      setSaveMessage({text:error instanceof Error ? error.message : "Could not save settings.",failed:true});
+    } finally {
+      setWorking(false);
+    }
+  }
   const reports=(bench?.agents||[]).filter(a=>session?.expected?.includes(a.userId) && a.result);
   const complete=!!session?.expected?.length && reports.length===session.expected.length && reports.every(a=>a.result.complete);
   const seconds=Math.max(0,...reports.map(a=>Number(a.result.measuredSeconds)||0));
@@ -155,11 +187,11 @@ function ProjectSessions({project,path,api,admin,username,report,perform}:{proje
       {!room && kind==="training" && <p className="mt-4 text-sm text-muted-foreground">Prepare and share a verified run bundle using the training configuration. Open a room from your desktop app, or use the organizer controls below.</p>}
     </div>
     {kind==="benchmark" && <>
-      <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs text-muted-foreground"><tr><th className="py-3">Computer / GPU</th><th>State</th><th>Work</th><th>Ready</th></tr></thead><tbody>{(bench?.agents||[]).map(a=>{const online=bench!.serverTime-a.lastSeenAt<20000;const mine=a.userId.startsWith(username+":");const tokens=Number(a.result?.processedTokens)||0;const total=reports.reduce((sum,r)=>sum+(Number(r.result.processedTokens)||0),0);return <tr className="border-t border-border" key={a.userId}><td className="py-4 pr-4">{a.device?.hostname || a.userId.split(":")[0]}<span className="mt-1 block text-xs text-muted-foreground">{a.device?.name}</span></td><td>{!online ? "Offline" : a.ready ? "Ready" : a.requestedReady ? "Checking readiness" : "Connected"}</td><td>{total ? `${(tokens/total*100).toFixed(1)}%` : "—"}</td><td>{session?.phase==="lobby" && (mine || admin) && <button className={secondary} disabled={working} onClick={()=>void action("benchmark",{action:"request_ready",sessionId:session.id,agentId:a.userId,ready:!a.requestedReady})}>{a.requestedReady ? "Unready" : "Mark ready"}</button>}</td></tr>;})}</tbody></table></div>
+      <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs text-muted-foreground"><tr><th className="py-3">Computer / GPU</th><th>State</th><th>Work</th><th>Ready</th></tr></thead><tbody>{(bench?.agents||[]).map(a=>{const online=bench!.serverTime-a.lastSeenAt<20000;const mine=a.userId.startsWith(username+":");const tokens=Number(a.result?.processedTokens)||0;const total=reports.reduce((sum,r)=>sum+(Number(r.result.processedTokens)||0),0);return <tr className="border-t border-border" key={a.userId}><td className="py-4 pr-4">{a.device?.hostname || a.userId.split(":")[0]}<span className="mt-1 block text-xs text-muted-foreground">{a.device?.name}</span></td><td>{!online ? "Offline" : a.ready ? "Ready" : a.requestedReady ? "Checking readiness" : "Connected"}</td><td>{total ? `${(tokens/total*100).toFixed(1)}%` : "—"}</td><td>{session?.phase==="lobby" && (mine || admin) && <button className={secondary} disabled={working} onClick={()=>void action("benchmark",{action:"request_ready",sessionId:session.id,agentId:a.userId,ready:!a.requestedReady})}>{a.requestedReady ? "Unready" : "Mark ready"}</button>}{admin && lobby && <button className={secondary} disabled={working} onClick={()=>void action("benchmark",{action:"remove_agent",sessionId:session.id,agentId:a.userId})}>Remove worker</button>}</td></tr>;})}</tbody></table></div>
       {rate>0 && <div className="rounded-md border border-primary/40 p-5 motion-safe:animate-in motion-safe:fade-in"><h4 className="font-display text-3xl">{format(Math.round(rate))} tokens / second</h4><p className="mt-3">Estimated training time: {(project.spec.targetTokens/rate/3600).toFixed(2)} hours</p><p className="mt-2 text-xs leading-relaxed text-muted-foreground">Measured on this project's generated-token workload. Corpus I/O, evaluation, checkpointing and changing participation add time. Reports are supplied by participating workers.</p></div>}
       {session?.phase==="finished" && !rate && <p className="text-sm text-muted-foreground">A training-time estimate requires complete, matching model-throughput reports from every participant.</p>}
-      {admin && session && <div className="flex flex-wrap gap-3"><button className={`${primary} gap-2`} disabled={working || !session.canStart} onClick={()=>void action("benchmark",{action:"start",sessionId:session.id})}><Play className="size-4" />Start benchmark</button><button className={`${secondary} gap-2`} disabled={working || session.phase==="cancelled"} onClick={()=>void action("benchmark",{action:"cancel",sessionId:session.id})}><Square className="size-4" />Cancel</button></div>}
-      {admin && session?.phase==="lobby" && <form className="grid gap-4 rounded-md border border-border p-5 sm:grid-cols-3" onSubmit={e=>{e.preventDefault();void action("benchmark",{action:"configure",sessionId:session.id,warmupSeconds:Number(warmup),measureSeconds:Number(measure),batchTokens:Number(batch),workload:"baseline-training",trainingProfile:profile,microbatch:Number(micro),localSteps:Number(steps)});}}><Label title="Warmup seconds"><input className={field} type="number" min={0} max={600} value={warmup} onChange={e=>setWarmup(e.target.value)} /></Label><Label title="Measurement seconds"><input className={field} type="number" min={10} max={3600} value={measure} onChange={e=>setMeasure(e.target.value)} /></Label><Label title="Tokens per exchange"><input className={field} type="number" value={batch} onChange={e=>setBatch(e.target.value)} /></Label><Label title="Precision / profile"><select className={field} value={profile} onChange={e=>{setProfile(e.target.value);if(e.target.value==="reference-fp32"){setMicro("1");setSteps("1");}}}>{["reference-fp32","optimized-fp32","optimized-bf16","compiled-bf16"].map(s=><option key={s}>{s}</option>)}</select></Label><Label title="Microbatch"><select className={field} value={micro} onChange={e=>setMicro(e.target.value)}>{[1,2,4,8,16,32,64].map(n=><option key={n}>{n}</option>)}</select></Label><Label title="Local steps"><select className={field} value={steps} onChange={e=>setSteps(e.target.value)}>{[1,2,4,8,16,32].map(n=><option key={n}>{n}</option>)}</select></Label><button className={secondary} disabled={working}>Save settings</button></form>}
+      {admin && session && <div className="flex flex-wrap gap-3"><button className={`${primary} gap-2`} disabled={working || settingsChanged || !session.canStart} onClick={()=>void action("benchmark",{action:"start",sessionId:session.id})}><Play className="size-4" />Start benchmark</button><button className={`${secondary} gap-2`} disabled={working || ["cancelled","finished"].includes(session.phase)} onClick={()=>void action("benchmark",{action:"cancel",sessionId:session.id})}><Square className="size-4" />Cancel</button></div>}
+      {admin && bench && (!session || ["lobby","finished","cancelled"].includes(session.phase)) && <form className="grid gap-4 rounded-md border border-border p-5 sm:grid-cols-3" onSubmit={saveSettings}><p className="text-sm text-muted-foreground sm:col-span-3">{lobby ? "Timing can change before Start. Stop and remove registered workers before changing the workload, then reconnect them." : "These settings will apply when you open the next lobby."}</p><Label title="Warmup seconds"><input className={field} type="number" required min={0} max={600} value={warmup} onChange={e=>setWarmup(e.target.value)} /></Label><Label title="Measurement seconds"><input className={field} type="number" required min={10} max={3600} value={measure} onChange={e=>setMeasure(e.target.value)} /></Label><Label title="Tokens per exchange"><input className={field} type="number" required min={project.spec.model.context} max={262144} step={project.spec.model.context} value={batch} onChange={e=>setBatch(e.target.value)} /></Label><Label title="Precision / profile"><select className={field} value={profile} onChange={e=>{setProfile(e.target.value);if(e.target.value==="reference-fp32")setMicro("1");if(["reference-fp32","optimized-fp16"].includes(e.target.value))setSteps("1");}}>{["reference-fp32","optimized-fp32","optimized-fp16","optimized-bf16","compiled-bf16"].map(s=><option key={s}>{s}</option>)}</select></Label><Label title="Microbatch"><select className={field} value={micro} onChange={e=>setMicro(e.target.value)}>{[1,2,4,8,16,32,64].map(n=><option key={n}>{n}</option>)}</select></Label><Label title="Local steps"><select className={field} value={steps} disabled={profile==="optimized-fp16"} onChange={e=>setSteps(e.target.value)}>{[1,2,4,8,16,32].map(n=><option key={n}>{n}</option>)}</select></Label><button className={secondary} disabled={working}>Save settings</button>{saveMessage && !saveMessage.failed && !settingsChanged && <p className="text-sm text-accent sm:col-span-3" role="status">{saveMessage.text}</p>}{saveMessage?.failed && <p className="text-sm text-destructive sm:col-span-3" role="alert">{saveMessage.text}</p>}</form>}
     </>}
     {kind==="training" && <>
       <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs text-muted-foreground"><tr><th className="py-3">Computer</th><th>State</th><th>Epoch</th><th>Loss</th><th>Ready</th></tr></thead><tbody>{progressRows.map(m=><tr className="border-t border-border" key={m.instance_id}><td className="py-4">{m.name}<span className="block text-xs text-muted-foreground">{m.device}</span></td><td>{training!.serverTime-m.last_seen>20000 ? "Offline" : m.ready ? "Ready" : "Connected"}</td><td>{m.data.epoch ?? "—"}</td><td>{typeof m.data.loss==="number" ? m.data.loss.toFixed(4) : "—"}</td><td>{room?.phase==="lobby" && m.user_id===username && <button className={secondary} disabled={working} onClick={()=>void action("rooms",{action:"ready",roomId:room.id,instanceId:m.instance_id,ready:!m.ready})}>{m.ready ? "Unready" : "Mark ready"}</button>}</td></tr>)}</tbody></table></div>
